@@ -1,14 +1,14 @@
 import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-controlled-wallets';
+import { duffel } from '../config/duffel.js';
+import { circleClient } from '../config/circle';
 
-const circleClient = initiateDeveloperControlledWalletsClient({
-  apiKey: process.env.CIRCLE_API_KEY || '',
-  entitySecret: process.env.CIRCLE_ENTITY_SECRET || '',
-});
+
 
 const executeCircleBooking = async (flightId: string, priceUsdc: string, recipientAddress?: string) => {
   console.log(`Executing Circle USDC Payment: $${priceUsdc} for Flight ${flightId}...`);
 
   if (process.env.CIRCLE_API_KEY && process.env.CIRCLE_AGENT_WALLET_ID && process.env.CIRCLE_USDC_TOKEN_ID) {
+    //mock transaction for testing
     const response = await circleClient.createTransaction({
       idempotencyKey: crypto.randomUUID(),
       walletId: process.env.CIRCLE_AGENT_WALLET_ID,

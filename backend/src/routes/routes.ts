@@ -7,10 +7,10 @@ import { getMonitorTasks } from '../controllers/getMonitorController.ts';
 
 const router = express.Router();
 
-router.get('/api/wallet/status', getWalletStatus);
+router.get('/wallet/status', getWalletStatus);
 
-router.get('api/flights/search', searchFlightsHandler);
-router.get('/api/monitor/tasks', getMonitorTasks);
-router.post('/api/agent/run', runAgentHandler);
+router.get('/flights/search', searchFlightsHandler);
+router.get('/monitor/tasks', getMonitorTasks);
+router.post('/agent/run', runAgentHandler);
 
 export default router;

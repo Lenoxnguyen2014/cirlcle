@@ -6,7 +6,7 @@ const apiKey = process.env.CIRCLE_API_KEY;
 const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
 
 if (!apiKey || !entitySecret) {
-  console.error("❌ CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET must be in your .env file!");
+  console.error("CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET must be in your .env file!");
   process.exit(1);
 }
 

@@ -1,4 +1,5 @@
 import { MonitorTask } from '../types/MonitorTask.js';
+import type { User } from '../types/User.js';
 
 // Helper to transform Supabase rows (snake_case) to app types (camelCase)
 const mapRowToTask = (row: any): MonitorTask => ({
@@ -12,4 +13,20 @@ const mapRowToTask = (row: any): MonitorTask => ({
   createdAt: row.created_at,
 });
 
-export { mapRowToTask };
+
+const mapRowToUser = (row: any): User =>  {
+  if (!row) return null as any;
+
+  return {
+    id: row.id,
+    firstName: row.first_name,      // 👈 snake_case -> camelCase
+    lastName: row.last_name,        // 👈 snake_case -> camelCase
+    email: row.email,
+    phone: row.phone || undefined,
+    travelDocUrl: row.travel_doc_url || undefined,
+    travelDocData: row.travel_doc_data || {},
+    createdAt: row.created_at,
+  };
+}
+
+export { mapRowToTask, mapRowToUser };

@@ -1,8 +1,5 @@
-import { GoogleGenAI, Type } from '@google/genai';
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
+import { Type } from '@google/genai';
+import { ai } from '../config/ai';
 
 interface AIDecision {
   shouldBook: boolean;

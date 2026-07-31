@@ -6,7 +6,7 @@ import "dotenv/config";
 const apiKey: string = process.env.CIRCLE_API_KEY || "";
 
 if (!apiKey) {
-  console.error("❌ Error: CIRCLE_API_KEY is missing from your .env file!");
+  console.error("Error: CIRCLE_API_KEY is missing from your .env file!");
   process.exit(1);
 }
 

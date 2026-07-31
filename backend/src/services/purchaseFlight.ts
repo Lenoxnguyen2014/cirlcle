@@ -1,8 +1,4 @@
-import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-controlled-wallets';
-import { duffel } from '../config/duffel.js';
 import { circleClient } from '../config/circle';
-
-
 
 const executeCircleBooking = async (flightId: string, priceUsdc: string, recipientAddress?: string) => {
   console.log(`Executing Circle USDC Payment: $${priceUsdc} for Flight ${flightId}...`);

@@ -1,5 +1,6 @@
 // src/services/authService.ts
 import { supabase } from '../lib/supabase.js';
+import { supabaseAdmin } from '../lib/supabaseAdmin.js';
 import { aiParseTravelDocs } from './aiParseTravelDocs.js';
 import { mapRowToUser } from '../utils/mapdb.js';
 
@@ -33,12 +34,12 @@ const authService = {
       const fileExt = params.mimeType.split('/')[1] || 'jpg';
       const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabaseAdmin.storage
         .from('travel-docs')
         .upload(fileName, params.imageBuffer, { contentType: params.mimeType });
 
       if (!uploadError) {
-        const { data: publicUrl } = supabase.storage
+        const { data: publicUrl } = supabaseAdmin.storage
           .from('travel-docs')
           .getPublicUrl(fileName);
         
@@ -48,8 +49,11 @@ const authService = {
       travelDocData = await aiParseTravelDocs(params.imageBuffer, params.mimeType);
     }
 
-    // 3. Link profile into public.users table using authData.user.id
-    const { data: inserted, error: dbError } = await supabase
+    // 3. Link profile into public.users table using authData.user.id.
+    // Uses the service-role client: Supabase Auth signups don't establish a
+    // session until email confirmation, so the anon client isn't authenticated
+    // as the new user yet and RLS would reject this insert otherwise.
+    const { data: inserted, error: dbError } = await supabaseAdmin
       .from('users')
       .insert({
         id: userId, // 👈 Uses Supabase Auth ID

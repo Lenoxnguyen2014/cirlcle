@@ -1,0 +1,30 @@
+// src/middleware/requireAuth.ts
+import { Request, Response, NextFunction } from 'express';
+import { supabase } from '../lib/supabase.js';
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { id: string; email?: string };
+    }
+  }
+}
+
+const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
+
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  req.user = { id: data.user.id, email: data.user.email };
+  next();
+};
+
+export { requireAuth };

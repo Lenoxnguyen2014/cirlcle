@@ -3,8 +3,10 @@ import { gemini, deepseek } from '../config/ai.js';
 type LlmProvider = 'gemini' | 'deepseek';
 
 // Local dev defaults to DeepSeek (cheap, no free-tier quota cliffs); production
-// defaults to Gemini. Override explicitly with AI_PROVIDER if needed.
-const provider: LlmProvider =
+// defaults to Gemini. Override explicitly with AI_PROVIDER if needed. Shared
+// across services (see locationExtractionService.ts) so the dev/prod split
+// stays consistent everywhere instead of being decided independently.
+export const provider: LlmProvider =
   (process.env.AI_PROVIDER as LlmProvider | undefined) ||
   (process.env.NODE_ENV === 'production' ? 'gemini' : 'deepseek');
 

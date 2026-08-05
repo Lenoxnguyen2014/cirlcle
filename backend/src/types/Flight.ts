@@ -5,6 +5,7 @@ export interface Flight {
   origin: string;
   destination: string;
   priceUsdc: string;
+  currency: string;
   departureTime?: string;
   arrivalTime?: string;
   [key: string]: any;

@@ -19,8 +19,8 @@ const mapRowToUser = (row: any): User =>  {
 
   return {
     id: row.id,
-    firstName: row.first_name,      // 👈 snake_case -> camelCase
-    lastName: row.last_name,        // 👈 snake_case -> camelCase
+    firstName: row.first_name,      
+    lastName: row.last_name, 
     email: row.email,
     phone: row.phone || undefined,
     travelDocUrl: row.travel_doc_url || undefined,

@@ -4,11 +4,14 @@ const duffel = new Duffel({
   token: process.env.DUFFEL_API_KEY || '',
 });
 
+type CabinClass = 'economy' | 'premium_economy' | 'business' | 'first';
 
 const searchFlights = async (
   origin: string = 'LAX',
   destination: string = 'JFK',
-  date: string = '2026-10-15'
+  date: string = '2026-10-15',
+  passengerCount: number = 1,
+  cabinClass: CabinClass = 'economy'
 ): Promise<Flight[]> => {
   const apiKey = process.env.DUFFEL_API_KEY;
 
@@ -28,8 +31,8 @@ const searchFlights = async (
           departure_time: null
         },
       ],
-      passengers: [{ type: 'adult' }],
-      cabin_class: 'economy',
+      passengers: Array.from({ length: passengerCount }, () => ({ type: 'adult' as const })),
+      cabin_class: cabinClass,
     });
 
     const offers = await duffel.offers.list({

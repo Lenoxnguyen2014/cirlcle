@@ -31,7 +31,9 @@ router.get("/boards/:boardId", requireAuth, boardController.getBoard);
 
 router.get("/boards/:boardId/cards", requireAuth, boardController.listCards);
 router.post("/boards/:boardId/cards", requireAuth, boardController.createCard);
+router.post("/boards/:boardId/cards/restore", requireAuth, boardController.restoreCard);
 router.post("/boards/:boardId/cards/photo", requireAuth, upload.single("photo"), boardController.createCard);
+router.patch("/boards/:boardId/cards/:cardId", requireAuth, boardController.updateContent);
 router.patch("/boards/:boardId/cards/:cardId/position", requireAuth, boardController.updatePosition);
 router.delete("/boards/:boardId/cards/:cardId", requireAuth, boardController.deleteCard);
 

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabaseClient } from '../lib/supabaseClient';
-import * as authApi from '../api/authClient';
+import * as authApi from '../api/auth/authClient';
 import type { AuthSession, AuthUser } from '../types/auth';
 
 const STORAGE_KEY = 'board_auth';

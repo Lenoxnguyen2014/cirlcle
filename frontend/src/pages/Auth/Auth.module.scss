@@ -1,0 +1,32 @@
+.page {
+  width: 400px;
+  max-width: 100%;
+  margin: 60px auto;
+  padding: 0 var(--space-xl);
+  text-align: left;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+
+  input {
+    font: inherit;
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-h);
+  }
+
+  button {
+    font: inherit;
+    padding: var(--space-md) var(--space-xl);
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+}

@@ -6,6 +6,10 @@ declare global {
   namespace Express {
     interface Request {
       user?: { id: string; email?: string };
+      // The raw JWT, kept so route handlers can build a per-request Supabase
+      // client scoped to this user (see lib/supabaseUser.ts) instead of
+      // reaching for the service-role client for actions the user performs.
+      accessToken?: string;
     }
   }
 }
@@ -24,6 +28,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   }
 
   req.user = { id: data.user.id, email: data.user.email };
+  req.accessToken = token;
   next();
 };
 

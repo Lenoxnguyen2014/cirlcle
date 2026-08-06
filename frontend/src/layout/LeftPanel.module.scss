@@ -1,0 +1,227 @@
+.panel {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+
+  &.collapsed {
+    width: 64px;
+  }
+}
+
+.scrollArea {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-xl) var(--space-lg);
+
+  .collapsed & {
+    padding: var(--space-xl) var(--space-sm);
+  }
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  width: 100%;
+}
+
+.home {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text-h);
+  text-decoration: none;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--button-size-xs);
+  height: var(--button-size-xs);
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--code-bg);
+  }
+}
+
+.iconButton {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--button-size-sm);
+  height: var(--button-size-sm);
+  margin-bottom: var(--space-xl);
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.createForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xl);
+  width: 100%;
+
+  input {
+    font: inherit;
+    font-size: var(--font-xs);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-h);
+  }
+
+  button {
+    font: inherit;
+    font-size: var(--font-xs);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xs);
+}
+
+.boardItem {
+  flex: 1;
+  font: inherit;
+  font-size: var(--font-sm);
+  text-align: left;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.active {
+    border-color: var(--accent-border);
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-weight: 600;
+  }
+}
+
+.boardIcon {
+  width: var(--button-size-sm);
+  height: var(--button-size-sm);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  background: var(--code-bg);
+  color: var(--text);
+  cursor: pointer;
+
+  &.active {
+    border-color: var(--accent-border);
+    background: var(--accent-bg);
+    color: var(--accent);
+  }
+}
+
+// Not inside .scrollArea on purpose — the dropdown menu here needs to
+// overflow past the narrow collapsed rail, and a scrolling ancestor
+// (overflow-y: auto on .scrollArea) would clip it.
+.bottom {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: var(--space-lg) var(--space-lg) var(--space-xl);
+  border-top: 1px solid var(--border);
+
+  .collapsed & {
+    padding: var(--space-lg) var(--space-sm) var(--space-xl);
+  }
+}
+
+.avatar {
+  width: var(--button-size-sm);
+  height: var(--button-size-sm);
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu {
+  position: absolute;
+  bottom: calc(var(--button-size-sm) + var(--space-sm));
+  left: 0;
+  min-width: 140px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  z-index: var(--z-dropdown);
+
+  button {
+    font: inherit;
+    padding: var(--space-md) var(--space-xl);
+    border: none;
+    background: var(--bg);
+    color: var(--text-h);
+    cursor: pointer;
+    white-space: nowrap;
+    width: 100%;
+    text-align: left;
+
+    &:hover {
+      background: var(--code-bg);
+    }
+  }
+}

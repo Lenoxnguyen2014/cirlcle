@@ -40,6 +40,7 @@ const mapRowToBoard = (row: any): Board => ({
 const mapRowToBoardCard = (row: any): BoardCard => ({
   id: row.id,
   boardId: row.board_id,
+  createdBy: row.created_by || undefined,
   type: row.type,
   content: row.content || undefined,
   photoUrl: row.photo_url || undefined,

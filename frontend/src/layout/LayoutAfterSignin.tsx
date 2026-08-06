@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
-import * as boardApi from '../api/boardClient';
-import { TopNavBar } from './TopNavBar';
+import * as boardApi from '../api/board/boardClient';
 import { LeftPanel } from './LeftPanel';
+import styles from './LayoutAfterSignin.module.scss';
 import type { Board } from '../types/board';
 
 export function LayoutAfterSignin({ children }: { children: ReactNode }) {
@@ -14,12 +14,9 @@ export function LayoutAfterSignin({ children }: { children: ReactNode }) {
   }, [location.pathname]);
 
   return (
-    <div className="app-shell">
-      <TopNavBar />
-      <div className="app-shell-body">
-        <LeftPanel boards={boards} />
-        <main className="app-shell-main">{children}</main>
-      </div>
+    <div className={styles.shell}>
+      <LeftPanel boards={boards} />
+      <main className={styles.main}>{children}</main>
     </div>
   );
 }

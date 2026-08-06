@@ -1,7 +1,7 @@
-import type { ChatMessage, Flight } from '../types/chat';
+import type { ChatMessage, Flight } from '../../types/chat';
 import { MessageBubble } from './MessageBubble';
-import { ToolCallCard } from './ToolCallCard';
-import { FlightList } from './FlightList';
+import { ToolCallCard } from '../tool/ToolCallCard';
+import { FlightList } from '../flight/FlightList';
 
 interface MessageListProps {
   messages: ChatMessage[];

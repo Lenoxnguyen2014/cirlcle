@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import styles from './Auth.module.scss';
 
 export function SignupPage() {
   const { signup } = useAuth();
@@ -33,7 +34,7 @@ export function SignupPage() {
 
   if (needsConfirmation) {
     return (
-      <div className="auth-page">
+      <div className={styles.page}>
         <h1>Check your email</h1>
         <p>
           We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then{' '}
@@ -44,9 +45,9 @@ export function SignupPage() {
   }
 
   return (
-    <div className="auth-page">
+    <div className={styles.page}>
       <h1>Sign up</h1>
-      <form className="auth-form" onSubmit={handleSubmit}>
+      <form className={styles.form} onSubmit={handleSubmit}>
         <input
           type="text"
           placeholder="First name"

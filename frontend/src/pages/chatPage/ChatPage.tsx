@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { runMcpChat } from '../api/mcpClient';
-import { MessageList } from '../components/MessageList';
-import { ChatInput } from '../components/ChatInput';
-import type { ChatMessage } from '../types/chat';
+import { runMcpChat } from '../../api/mcp/mcpClient';
+import { MessageList } from '../../components/message/MessageList';
+import { ChatInput } from '../../components/flight/ChatInput';
+import type { ChatMessage } from '../../types/chat';
 
 const ChatPage = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);

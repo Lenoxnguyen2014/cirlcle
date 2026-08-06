@@ -1,4 +1,4 @@
-import type { Flight } from '../types/chat';
+import type { Flight } from '../../types/chat';
 import { FlightCard } from './FlightCard';
 
 interface FlightListProps {

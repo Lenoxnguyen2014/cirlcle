@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import styles from './Auth.module.scss';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -25,9 +26,9 @@ export function LoginPage() {
   };
 
   return (
-    <div className="auth-page">
+    <div className={styles.page}>
       <h1>Log in</h1>
-      <form className="auth-form" onSubmit={handleSubmit}>
+      <form className={styles.form} onSubmit={handleSubmit}>
         <input
           type="email"
           placeholder="Email"

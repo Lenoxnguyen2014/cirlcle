@@ -8,6 +8,7 @@ export interface Board {
 export interface BoardCard {
   id: string;
   boardId: string;
+  createdBy?: string;
   type: 'text' | 'link' | 'photo';
   content?: string;
   photoUrl?: string;

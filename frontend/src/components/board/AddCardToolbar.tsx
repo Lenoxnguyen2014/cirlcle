@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
-import * as boardApi from '../../api/boardClient';
+import * as boardApi from '../../api/board/boardClient';
+import styles from './AddCardToolbar.module.scss';
 import type { BoardCard } from '../../types/board';
 
 const URL_REGEX = /^https?:\/\/\S+$/i;
@@ -62,7 +63,7 @@ export function AddCardToolbar({ boardId, nextPosition, onCardCreated }: AddCard
   };
 
   return (
-    <div className="board-toolbar">
+    <div className={styles.toolbar}>
       <form onSubmit={handleSubmit}>
         <input
           type="text"

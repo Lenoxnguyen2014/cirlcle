@@ -1,4 +1,4 @@
-import type { Board, BoardCard, BoardLocation } from '../types/board';
+import type { Board, BoardCard, BoardLocation } from '../../types/board';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const STORAGE_KEY = 'board_auth';
@@ -58,6 +58,12 @@ export const createTextOrLinkCard = (
 export const createPhotoCard = (boardId: string, formData: FormData) =>
   request<BoardCard>(`/boards/${boardId}/cards/photo`, { method: 'POST', body: formData });
 
+export const updateCardContent = (boardId: string, cardId: string, payload: { type: 'text' | 'link'; content: string }) =>
+  request<BoardCard>(`/boards/${boardId}/cards/${cardId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+
 export const updateCardPosition = (boardId: string, cardId: string, x: number, y: number) =>
   request<void>(`/boards/${boardId}/cards/${cardId}/position`, {
     method: 'PATCH',
@@ -66,5 +72,18 @@ export const updateCardPosition = (boardId: string, cardId: string, x: number, y
 
 export const deleteCard = (boardId: string, cardId: string) =>
   request<void>(`/boards/${boardId}/cards/${cardId}`, { method: 'DELETE' });
+
+export const restoreCard = (
+  boardId: string,
+  snapshot: {
+    type: 'text' | 'link' | 'photo';
+    content?: string;
+    photoUrl?: string;
+    linkMeta?: BoardCard['linkMeta'];
+    positionX: number;
+    positionY: number;
+    rawExtractedLocations?: BoardCard['rawExtractedLocations'];
+  }
+) => request<BoardCard>(`/boards/${boardId}/cards/restore`, { method: 'POST', body: JSON.stringify(snapshot) });
 
 export const listBoardLocations = (boardId: string) => request<BoardLocation[]>(`/boards/${boardId}/locations`);

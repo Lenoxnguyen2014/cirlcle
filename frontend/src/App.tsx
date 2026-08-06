@@ -1,13 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { RequireAuth } from './components/RequireAuth';
+import { RequireAuth } from './components/auth/RequireAuth';
 import { LayoutAfterSignin } from './layout/LayoutAfterSignin';
-import { LoginPage } from './pages/LoginPage';
-import { SignupPage } from './pages/SignupPage';
-import { BoardsHomePage } from './pages/BoardsHomePage';
-import { InteractiveBoardPage } from './pages/InteractiveBoardPage';
-import { MapPage } from './pages/MapPage';
-import './App.css';
+import { LoginPage } from './pages/Auth/LoginPage';
+import { SignupPage } from './pages/Auth/SignupPage';
+import { BoardsHomePage } from './pages/BoardsHome/BoardsHomePage';
+import { InteractiveBoardPage } from './pages/InteractiveBoard/InteractiveBoardPage';
+import { MapPage } from './pages/Map/MapPage';
 
 function App() {
   return (

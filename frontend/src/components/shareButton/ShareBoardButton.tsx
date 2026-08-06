@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Share2, Check } from 'lucide-react';
+import styles from './ShareBoardButton.module.scss';
 
 export function ShareBoardButton({ boardId }: { boardId: string }) {
   const [copied, setCopied] = useState(false);
@@ -21,7 +22,13 @@ export function ShareBoardButton({ boardId }: { boardId: string }) {
   };
 
   return (
-    <button type="button" className="share-button" onClick={handleClick} aria-label="Copy share link" title={copied ? 'Copied!' : 'Copy share link'}>
+    <button
+      type="button"
+      className={styles.button}
+      onClick={handleClick}
+      aria-label="Copy share link"
+      title={copied ? 'Copied!' : 'Copy share link'}
+    >
       {copied ? <Check size={16} /> : <Share2 size={16} />}
     </button>
   );

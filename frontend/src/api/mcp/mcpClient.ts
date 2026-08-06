@@ -1,4 +1,4 @@
-import type { ChatMessage, McpRunResponseData } from '../types/chat';
+import type { ChatMessage, McpRunResponseData } from '../../types/chat';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 

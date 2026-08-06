@@ -6,10 +6,11 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import 'leaflet/dist/leaflet.css';
-import * as boardApi from '../api/boardClient';
-import { supabaseClient } from '../lib/supabaseClient';
-import { mapRowToBoardLocation } from '../utils/mapRow';
-import type { BoardLocation } from '../types/board';
+import * as boardApi from '../../api/board/boardClient';
+import { supabaseClient } from '../../lib/supabaseClient';
+import { mapRowToBoardLocation } from '../../utils/mapRow';
+import styles from './MapPage.module.scss';
+import type { BoardLocation } from '../../types/board';
 
 // Vite doesn't resolve Leaflet's default marker icon paths out of the box.
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -93,9 +94,8 @@ export function MapPage() {
   if (!boardId) return null;
 
   return (
-    <div className="map-page">
-      <div className="board-page-header">
-        <Link to="/">← Boards</Link>
+    <div className={styles.page}>
+      <div className={styles.header}>
         <Link to={`/boards/${boardId}`}>View board</Link>
       </div>
 
@@ -107,7 +107,7 @@ export function MapPage() {
         <MapContainer
           center={[locations[0].lat!, locations[0].lng!]}
           zoom={4}
-          className="map-container"
+          className={styles.mapContainer}
           key={boardId}
         >
           <TileLayer

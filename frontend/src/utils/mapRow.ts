@@ -6,6 +6,7 @@ export function mapRowToBoardCard(row: any): BoardCard {
   return {
     id: row.id,
     boardId: row.board_id,
+    createdBy: row.created_by ?? undefined,
     type: row.type,
     content: row.content ?? undefined,
     photoUrl: row.photo_url ?? undefined,

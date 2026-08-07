@@ -43,22 +43,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const stored = readStored();
-    if (stored) {
-      setUser(stored.user);
-      setSession(stored.session);
-      supabaseClient.auth.setSession(stored.session).catch(() => {});
-    }
-    setLoading(false);
-  }, []);
-
   const applyAuth = async (result: { user: AuthUser; session: AuthSession }) => {
     setUser(result.user);
     setSession(result.session);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
     await supabaseClient.auth.setSession(result.session);
   };
+
+  useEffect(() => {
+    const init = async () => {
+      // Clicking the email confirmation link redirects back here with
+      // access_token/refresh_token in the URL hash — log the user straight
+      // in instead of making them confirm and then log in separately.
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        try {
+          const profile = await authApi.getProfile(accessToken);
+          await applyAuth({ user: profile, session: { access_token: accessToken, refresh_token: refreshToken } });
+          setLoading(false);
+          return;
+        } catch {
+          // fall through to the normal stored-session restore below
+        }
+      }
+
+      const stored = readStored();
+      if (stored) {
+        setUser(stored.user);
+        setSession(stored.session);
+        supabaseClient.auth.setSession(stored.session).catch(() => {});
+      }
+      setLoading(false);
+    };
+
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const login = async (email: string, password: string) => {
     const result = await authApi.login(email, password);

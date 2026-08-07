@@ -57,14 +57,17 @@ export function MapPage() {
 
   useEffect(() => {
     if (!boardId) return;
-    boardApi
-      .listBoardLocations(boardId)
-      .then(setLocations)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load locations'));
-  }, [boardId]);
 
-  useEffect(() => {
-    if (!boardId) return;
+    const fetchLocations = () =>
+      boardApi
+        .listBoardLocations(boardId)
+        .then(setLocations)
+        .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load locations'));
+
+    // Same reasoning as InteractiveBoardPage's card subscription: re-fetch on
+    // every (re)connect, since postgres_changes never replays events missed
+    // while the socket was briefly disconnected.
+    fetchLocations();
 
     const channel = supabaseClient
       .channel(`board-locations-${boardId}`)
@@ -84,7 +87,9 @@ export function MapPage() {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') fetchLocations();
+      });
 
     return () => {
       supabaseClient.removeChannel(channel);

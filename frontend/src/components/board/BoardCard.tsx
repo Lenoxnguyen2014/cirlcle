@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Group, Rect, Text, Image as KonvaImage } from 'react-konva';
+import { Group, Rect, Text, Label, Tag, Image as KonvaImage } from 'react-konva';
 import useImage from 'use-image';
 import Konva from 'konva';
 import type { BoardCard as BoardCardType } from '../../types/board';
@@ -19,6 +19,8 @@ interface BoardCardProps {
   onViewOnMap: (cardId: string) => void;
   onSelect: (cardId: string) => void;
   onEdit: (cardId: string, type: 'text' | 'link', content: string) => void;
+  onEditingChange?: (cardId: string, isEditing: boolean) => void;
+  remoteSelectedBy?: { email: string; color: string; isEditing?: boolean }[];
 }
 
 // Konva.Text auto-computes wrapped height once width is set — create one
@@ -33,7 +35,17 @@ function PhotoContent({ url }: { url: string }) {
   return <KonvaImage image={image} x={PADDING} y={PADDING} width={CONTENT_WIDTH} height={PHOTO_HEIGHT} cornerRadius={4} />;
 }
 
-export function BoardCard({ card, highlighted, selected, onDragEnd, onViewOnMap, onSelect, onEdit }: BoardCardProps) {
+export function BoardCard({
+  card,
+  highlighted,
+  selected,
+  onDragEnd,
+  onViewOnMap,
+  onSelect,
+  onEdit,
+  onEditingChange,
+  remoteSelectedBy,
+}: BoardCardProps) {
   const groupRef = useRef<Konva.Group>(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -93,6 +105,8 @@ export function BoardCard({ card, highlighted, selected, onDragEnd, onViewOnMap,
       setIsEditing(false);
       return;
     }
+
+    onEditingChange?.(card.id, true);
 
     const scale = stage.scaleX();
     const stageBox = stage.container().getBoundingClientRect();
@@ -166,6 +180,7 @@ export function BoardCard({ card, highlighted, selected, onDragEnd, onViewOnMap,
       textarea.removeEventListener('blur', commit);
       textarea.removeEventListener('keydown', handleKeyDown);
       textarea.remove();
+      onEditingChange?.(card.id, false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
@@ -212,6 +227,32 @@ export function BoardCard({ card, highlighted, selected, onDragEnd, onViewOnMap,
         shadowBlur={6}
         shadowOffsetY={2}
       />
+
+      {/* Other users' live selection — concentric outline + name badge per
+          selector, in their own presence color, so it reads distinctly from
+          this client's own purple selection outline above. */}
+      {remoteSelectedBy?.map((sel, i) => (
+        <Group key={`${sel.email}-${i}`} listening={false}>
+          <Rect
+            x={-4 - i * 4}
+            y={-4 - i * 4}
+            width={CARD_WIDTH + 8 + i * 8}
+            height={layout.totalHeight + 8 + i * 8}
+            stroke={sel.color}
+            strokeWidth={2}
+            cornerRadius={12}
+          />
+          <Label x={-4 - i * 4} y={-22 - i * 4}>
+            <Tag fill={sel.color} cornerRadius={4} />
+            <Text
+              text={`${sel.email.split('@')[0] || 'Guest'}${sel.isEditing ? ' is writing...' : ''}`}
+              fontSize={10}
+              fill="#fff"
+              padding={3}
+            />
+          </Label>
+        </Group>
+      ))}
 
       {card.type === 'photo' && card.photoUrl && <PhotoContent url={card.photoUrl} />}
 

@@ -42,6 +42,16 @@ const boardController = {
     }
   },
 
+  async joinBoard(req: Request, res: Response) {
+    try {
+      const client = createUserScopedClient(req.accessToken!);
+      await boardService.joinBoard(client, req.params.boardId, req.user!.id);
+      return res.status(200).json({ success: true });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+  },
+
   async listCards(req: Request, res: Response) {
     try {
       const client = createUserScopedClient(req.accessToken!);

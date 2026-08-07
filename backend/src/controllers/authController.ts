@@ -1,6 +1,7 @@
 // src/controllers/authController.ts
 import { Request, Response } from 'express';
 import { authService } from '../services/authService.js';
+import { createUserScopedClient } from '../lib/supabaseUser.js';
 
 const authController = {
   /**
@@ -37,7 +38,33 @@ const authController = {
 
       return res.status(200).json({ success: true, data: result });
     } catch (error: any) {
-      return res.status(401).json({ success: false, error: error.message });
+      return res.status(401).json({ success: false, error: error.message, code: error.code });
+    }
+  },
+
+  /**
+   * POST /api/auth/resend-confirmation
+   */
+  async resendConfirmation(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      const result = await authService.resendConfirmation(email);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+  },
+
+  /**
+   * GET /api/me
+   */
+  async me(req: Request, res: Response) {
+    try {
+      const client = createUserScopedClient(req.accessToken!);
+      const profile = await authService.getProfile(client, req.user!.id);
+      return res.status(200).json({ success: true, data: profile });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, error: error.message });
     }
   },
 

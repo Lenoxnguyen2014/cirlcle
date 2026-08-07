@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Stage, Layer } from 'react-konva';
 import Konva from 'konva';
@@ -34,6 +34,14 @@ interface PresenceUser {
   color: string;
 }
 
+interface RemoteSelectionState {
+  userId: string;
+  cardId: string | null;
+  email: string;
+  color: string;
+  isEditing?: boolean;
+}
+
 export function InteractiveBoardPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const [searchParams] = useSearchParams();
@@ -50,11 +58,11 @@ export function InteractiveBoardPage() {
   const [stageHeight, setStageHeight] = useState(560);
 
   const [remoteCursors, setRemoteCursors] = useState<Record<string, RemoteCursorState>>({});
+  const [remoteSelections, setRemoteSelections] = useState<Record<string, RemoteSelectionState>>({});
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
   const lastCursorSentRef = useRef(0);
-  // Client-local undo history — same idea as Figma's: only the client that
-  // deleted a card remembers its full data, and undo just recreates it.
+ 
   const lastDeletedRef = useRef<BoardCard | null>(null);
 
   useEffect(() => {
@@ -70,14 +78,20 @@ export function InteractiveBoardPage() {
 
   useEffect(() => {
     if (!boardId) return;
-    boardApi
-      .listBoardCards(boardId)
-      .then(setCards)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load board'));
-  }, [boardId]);
 
-  useEffect(() => {
-    if (!boardId) return;
+    const fetchCards = () =>
+      boardApi
+        .listBoardCards(boardId)
+        .then(setCards)
+        .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load board'));
+
+    // Initial load, then re-fetched every time this subscription (re)connects.
+    // postgres_changes has no catch-up delivery for events missed while the
+    // socket was disconnected (network blip, backgrounded tab, etc.) — a
+    // dropped-then-reconnected client would otherwise silently stay stale
+    // forever, since Supabase auto-reconnects and re-fires 'SUBSCRIBED' but
+    // never replays what happened during the gap.
+    fetchCards();
 
     const channel = supabaseClient
       .channel(`board-cards-${boardId}`)
@@ -96,21 +110,26 @@ export function InteractiveBoardPage() {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') fetchCards();
+      });
 
     return () => {
       supabaseClient.removeChannel(channel);
     };
   }, [boardId]);
 
-  // Live cursors (Broadcast) + "who's online" (Presence) — neither touches
-  // Postgres, both are ephemeral pub/sub scoped to this board's channel.
+ 
   useEffect(() => {
     if (!boardId || !user) return;
 
     const color = colorForUser(user.id);
     const channel = supabaseClient.channel(`presence-${boardId}`, {
-      config: { presence: { key: user.id } },
+      // private: true is required for Supabase's Realtime Authorization to
+      // enforce (and thus even consult) the RLS policies on
+      // realtime.messages — without it, Broadcast/Presence silently only
+      // ever reflect your own client's optimistic local state.
+      config: { private: true, presence: { key: user.id } },
     });
 
     channel
@@ -118,6 +137,11 @@ export function InteractiveBoardPage() {
         const cursor = payload as RemoteCursorState;
         if (cursor.userId === user.id) return;
         setRemoteCursors((prev) => ({ ...prev, [cursor.userId]: cursor }));
+      })
+      .on('broadcast', { event: 'selection' }, ({ payload }) => {
+        const selection = payload as RemoteSelectionState;
+        if (selection.userId === user.id) return;
+        setRemoteSelections((prev) => ({ ...prev, [selection.userId]: selection }));
       })
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState<{ email: string; color: string }>();
@@ -130,6 +154,12 @@ export function InteractiveBoardPage() {
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
         setRemoteCursors((prev) => {
+          if (!(key in prev)) return prev;
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        setRemoteSelections((prev) => {
           if (!(key in prev)) return prev;
           const next = { ...prev };
           delete next[key];
@@ -162,9 +192,41 @@ export function InteractiveBoardPage() {
     setCards((prev) => (prev.some((c) => c.id === card.id) ? prev : [...prev, card]));
   }, []);
 
-  const handleSelectCard = useCallback((cardId: string) => {
-    setSelectedCardId(cardId);
-  }, []);
+  // Broadcasts this user's current selection (or null to clear it), plus
+  // whether they're actively editing it — so other viewers can highlight the
+  // same card in this user's presence color, with a "is writing..." badge
+  // while they're mid-edit. Same idea as the cursor broadcast above, just
+  // for selection state.
+  const broadcastSelection = useCallback(
+    (cardId: string | null, isEditing = false) => {
+      const channel = presenceChannelRef.current;
+      if (!channel || !user) return;
+      channel.send({
+        type: 'broadcast',
+        event: 'selection',
+        payload: { userId: user.id, cardId, email: user.email, color: colorForUser(user.id), isEditing },
+      });
+    },
+    [user]
+  );
+
+  const handleSelectCard = useCallback(
+    (cardId: string) => {
+      setSelectedCardId(cardId);
+      broadcastSelection(cardId);
+    },
+    [broadcastSelection]
+  );
+
+  // Fired by BoardCard when its inline textarea opens/closes — re-broadcasts
+  // the same selection with isEditing toggled so other viewers see "is
+  // writing..." while this card is actively being edited.
+  const handleCardEditingChange = useCallback(
+    (cardId: string, isEditing: boolean) => {
+      broadcastSelection(cardId, isEditing);
+    },
+    [broadcastSelection]
+  );
 
   const handleDeleteCard = useCallback(
     (cardId: string) => {
@@ -174,9 +236,10 @@ export function InteractiveBoardPage() {
         return prev.filter((c) => c.id !== cardId);
       });
       setSelectedCardId((prev) => (prev === cardId ? null : prev));
+      broadcastSelection(null);
       if (boardId) boardApi.deleteCard(boardId, cardId).catch(() => {});
     },
-    [boardId]
+    [boardId, broadcastSelection]
   );
 
   const handleUndo = useCallback(() => {
@@ -307,6 +370,22 @@ export function InteractiveBoardPage() {
     return { x: centerX - 100 + jitter, y: centerY - 40 + jitter };
   }, [cards.length, stageWidth, stageHeight]);
 
+  // Group remote selections by card so a card can render an outline per
+  // remote user who currently has it selected (rare to have more than one,
+  // but nothing stops it).
+  const remoteSelectionsByCard = useMemo(() => {
+    const map: Record<string, { email: string; color: string; isEditing?: boolean }[]> = {};
+    for (const selection of Object.values(remoteSelections)) {
+      if (!selection.cardId) continue;
+      (map[selection.cardId] ??= []).push({
+        email: selection.email,
+        color: selection.color,
+        isEditing: selection.isEditing,
+      });
+    }
+    return map;
+  }, [remoteSelections]);
+
   const highlightCard = highlightCardId ? cards.find((c) => c.id === highlightCardId) : undefined;
 
   // Center on a highlighted card once, imperatively — a controlled x/y prop
@@ -356,7 +435,10 @@ export function InteractiveBoardPage() {
           onWheel={handleWheel}
           onMouseMove={handleMouseMove}
           onClick={(e) => {
-            if (e.target === e.target.getStage()) setSelectedCardId(null);
+            if (e.target === e.target.getStage()) {
+              setSelectedCardId(null);
+              broadcastSelection(null);
+            }
           }}
         >
           <Layer>
@@ -370,6 +452,8 @@ export function InteractiveBoardPage() {
                 onViewOnMap={(cardId) => navigate(`/boards/${boardId}/map?cardId=${cardId}`)}
                 onSelect={handleSelectCard}
                 onEdit={handleEditCard}
+                onEditingChange={handleCardEditingChange}
+                remoteSelectedBy={remoteSelectionsByCard[card.id]}
               />
             ))}
             {Object.values(remoteCursors).map((cursor) => (

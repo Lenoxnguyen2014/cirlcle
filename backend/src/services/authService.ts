@@ -1,6 +1,8 @@
 // src/services/authService.ts
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase.js';
 import { supabaseAdmin } from '../lib/supabaseAdmin.js';
+import { createUserScopedClient } from '../lib/supabaseUser.js';
 import { aiParseTravelDocs } from './aiParseTravelDocs.js';
 import { mapRowToUser } from '../utils/mapdb.js';
 
@@ -84,19 +86,40 @@ const authService = {
       password: passwordAttempt,
     });
 
-    if (error) throw new Error(`Login Error: ${error.message}`);
+    if (error) {
+      // Preserve Supabase's error code (e.g. "email_not_confirmed") so the
+      // controller/frontend can react specifically — an expired/unclicked
+      // confirmation link surfaces here as a login failure, not a signup one.
+      const err = new Error(`Login Error: ${error.message}`) as Error & { code?: string };
+      err.code = (error as any).code;
+      throw err;
+    }
 
-    // Fetch user profile from public.users
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
+    // Fetch user profile from public.users — via a client scoped to THIS
+    // login's own access token, not the shared singleton `supabase` client.
+    // That shared client's session gets overwritten by every signIn/signUp
+    // call across all concurrent requests, so under concurrent logins (e.g.
+    // two users signing in around the same time) this select could run
+    // under a different/invalid auth context and silently return no row.
+    const client = createUserScopedClient(data.session.access_token);
+    const { data: userProfile } = await client.from('users').select('*').eq('id', data.user.id).single();
 
     return {
       user: userProfile ? mapRowToUser(userProfile) : null,
       session: data.session,
     };
+  },
+
+  async getProfile(client: SupabaseClient, userId: string) {
+    const { data, error } = await client.from('users').select('*').eq('id', userId).single();
+    if (error) throw new Error(`Profile Fetch Error: ${error.message}`);
+    return mapRowToUser(data);
+  },
+
+  async resendConfirmation(email: string) {
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
+    if (error) throw new Error(`Resend Confirmation Error: ${error.message}`);
+    return { success: true };
   },
 
   async logout() {

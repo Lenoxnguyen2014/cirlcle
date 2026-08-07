@@ -48,6 +48,11 @@ export const listBoards = () => request<Board[]>('/boards');
 
 export const getBoard = (boardId: string) => request<Board>(`/boards/${boardId}`);
 
+// Records this user as a board_members row (idempotent) — purely so Realtime
+// Authorization has a membership check for the presence/broadcast channel;
+// doesn't gate anything else.
+export const joinBoard = (boardId: string) => request<void>(`/boards/${boardId}/join`, { method: 'POST' });
+
 export const listBoardCards = (boardId: string) => request<BoardCard[]>(`/boards/${boardId}/cards`);
 
 export const createTextOrLinkCard = (

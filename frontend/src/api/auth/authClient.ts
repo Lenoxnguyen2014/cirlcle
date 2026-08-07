@@ -9,7 +9,7 @@ interface AuthResult {
   session: AuthSession | null;
 }
 
-async function request(path: string, body: Record<string, unknown>): Promise<AuthResult> {
+async function request<T>(path: string, body: Record<string, unknown>): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${API_BASE_URL}/api${path}`, {
@@ -23,14 +23,20 @@ async function request(path: string, body: Record<string, unknown>): Promise<Aut
 
   const responseBody = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(responseBody.error ?? `Request failed with status ${res.status}`);
+    // .code (e.g. "email_not_confirmed") lets callers react specifically
+    // instead of just showing the raw message.
+    const err = new Error(responseBody.error ?? `Request failed with status ${res.status}`) as Error & {
+      code?: string;
+    };
+    err.code = responseBody.code;
+    throw err;
   }
 
-  return responseBody.data as AuthResult;
+  return responseBody.data as T;
 }
 
 export async function login(email: string, password: string): Promise<AuthResult> {
-  return request('/login', { email, password });
+  return request<AuthResult>('/login', { email, password });
 }
 
 export async function signup(params: {
@@ -39,7 +45,31 @@ export async function signup(params: {
   firstName: string;
   lastName: string;
 }): Promise<AuthResult> {
-  return request('/signup', params);
+  return request<AuthResult>('/signup', params);
+}
+
+export async function resendConfirmation(email: string): Promise<void> {
+  await request<void>('/resend-confirmation', { email });
+}
+
+// Used right after an email-confirmation redirect, before any session is
+// stored locally — the token comes straight from the URL hash Supabase
+// appended, not from localStorage.
+export async function getProfile(accessToken: string): Promise<AuthUser> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/api/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  } catch {
+    throw new Error('Network error: unable to reach the backend');
+  }
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(body.error ?? `Request failed with status ${res.status}`);
+  }
+  return body.data as AuthUser;
 }
 
 export async function logout(): Promise<void> {

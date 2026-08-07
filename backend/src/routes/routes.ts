@@ -23,11 +23,14 @@ router.post("/mcp/run", runAgent); // New route for MCP agent execution
 
 router.post("/signup", upload.single("passportPhoto"), authController.signUp);
 router.post("/login", authController.login);
+router.post("/resend-confirmation", authController.resendConfirmation);
+router.get("/me", requireAuth, authController.me);
 router.post("/logout", authController.logout);
 
 router.post("/boards", requireAuth, boardController.createBoard);
 router.get("/boards", requireAuth, boardController.listBoards);
 router.get("/boards/:boardId", requireAuth, boardController.getBoard);
+router.post("/boards/:boardId/join", requireAuth, boardController.joinBoard);
 
 router.get("/boards/:boardId/cards", requireAuth, boardController.listCards);
 router.post("/boards/:boardId/cards", requireAuth, boardController.createCard);

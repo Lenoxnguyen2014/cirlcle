@@ -1,5 +1,4 @@
-const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
-const USER_AGENT = 'hackathon-travel-board/1.0 (contact: lenoxnguyen2014@gmail.com)';
+const GEOCODE_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 
 interface GeocodeResult {
   lat: number;
@@ -7,37 +6,49 @@ interface GeocodeResult {
   raw: any;
 }
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const geocodeLocationName = async (name: string): Promise<GeocodeResult | null> => {
   try {
-    const url = `${NOMINATIM_URL}?format=json&limit=1&q=${encodeURIComponent(name)}`;
-    const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    const url = `${GEOCODE_URL}?address=${encodeURIComponent(name)}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+    const response = await fetch(url);
     if (!response.ok) return null;
 
-    const results = await response.json();
-    const first = results?.[0];
+    const data = await response.json();
+    const first = data?.results?.[0];
     if (!first) return null;
 
-    return { lat: parseFloat(first.lat), lng: parseFloat(first.lon), raw: first };
+    return { lat: first.geometry.location.lat, lng: first.geometry.location.lng, raw: first };
   } catch (error: any) {
     console.error('Error in geocodeLocationName:', error.message);
     return null;
   }
 };
 
-// Nominatim's usage policy caps requests at ~1/sec — always sequential, never Promise.all.
 const geocodeBatch = async (names: string[]): Promise<Map<string, GeocodeResult | null>> => {
   const uniqueNames = [...new Set(names)];
   const results = new Map<string, GeocodeResult | null>();
 
   for (const name of uniqueNames) {
     results.set(name, await geocodeLocationName(name));
-    await sleep(1100);
   }
 
   return results;
 };
 
-export { geocodeLocationName, geocodeBatch };
+// Used to suggest a label when a user drops a manual pin on the map —
+// resolves clicked coordinates back to a human-readable place name.
+const reverseGeocode = async (lat: number, lng: number): Promise<string | null> => {
+  try {
+    const url = `${GEOCODE_URL}?latlng=${lat},${lng}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data?.results?.[0]?.formatted_address ?? null;
+  } catch (error: any) {
+    console.error('Error in reverseGeocode:', error.message);
+    return null;
+  }
+};
+
+export { geocodeLocationName, geocodeBatch, reverseGeocode };
 export type { GeocodeResult };

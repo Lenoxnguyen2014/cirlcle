@@ -11,10 +11,21 @@ const PHOTO_HEIGHT = 90;
 const GAP = 8;
 const MIN_CARD_HEIGHT = 90;
 
+// Matches --accent in index.scss — Konva draws to <canvas>, which can't read
+// CSS custom properties, so the value has to be duplicated here as a literal
+// rather than referenced via var(--accent). Both forms derive from the same
+// value so the border and glow can't drift out of sync with each other.
+const ACCENT_COLOR = '#aa3bff';
+const ACCENT_GLOW = 'rgba(170, 59, 255, 0.6)';
+
 interface BoardCardProps {
   card: BoardCardType;
   highlighted?: boolean;
   selected: boolean;
+  // Color of the day this card is scheduled on (via the map's itinerary),
+  // if any — shown as the card's border so a day's color-coding is visible
+  // here too, not just on the map.
+  dayColor?: string;
   onDragEnd: (id: string, x: number, y: number) => void;
   onViewOnMap: (cardId: string) => void;
   onSelect: (cardId: string) => void;
@@ -39,6 +50,7 @@ export function BoardCard({
   card,
   highlighted,
   selected,
+  dayColor,
   onDragEnd,
   onViewOnMap,
   onSelect,
@@ -47,17 +59,33 @@ export function BoardCard({
   remoteSelectedBy,
 }: BoardCardProps) {
   const groupRef = useRef<Konva.Group>(null);
+  const rectRef = useRef<Konva.Rect>(null);
   const [isEditing, setIsEditing] = useState(false);
 
   const locationNames = (card.rawExtractedLocations ?? []).map((l) => l.name).join(', ');
   const isExtracting = card.extractionStatus === 'pending' || card.extractionStatus === 'processing';
   const statusText = isExtracting ? 'Extracting locations...' : locationNames ? `📍 ${locationNames}` : 'No locations found';
   // Text cards never run AI extraction — showing "No locations found" would
-  // wrongly imply extraction ran and came up empty.
-  const showStatus = card.type !== 'text';
+  // wrongly imply extraction ran and came up empty. Manual pin cards are
+  // still type 'text' but do have a location, so show status for those too.
+  const showStatus = card.type !== 'text' || locationNames.length > 0;
   const linkDescription = card.linkMeta?.description || card.content || '';
   const isActive = highlighted || selected;
   const isEditable = card.type === 'text' || card.type === 'link';
+
+  // Animates the selection glow/border in rather than snapping instantly.
+  // stroke/shadowColor/shadowBlur are intentionally NOT reactive JSX props
+  // on the Rect below — react-konva would re-apply them directly on every
+  // render and fight this tween mid-animation, so this effect is the only
+  // thing that ever changes them after mount.
+  useEffect(() => {
+    rectRef.current?.to({
+      stroke: isActive ? ACCENT_COLOR : '#e5e4e7',
+      shadowColor: isActive ? ACCENT_GLOW : 'rgba(0,0,0,0.45)',
+      shadowBlur: isActive ? 18 : 10,
+      duration: 0.15,
+    });
+  }, [isActive]);
 
   const layout = useMemo(() => {
     const contentY = PADDING;
@@ -75,22 +103,41 @@ export function BoardCard({
       contentHeight = titleHeight + (descHeight ? GAP / 2 + descHeight : 0);
     }
 
-    if (!showStatus) {
-      return { contentY, descY, contentHeight, statusY: 0, viewMapY: 0, totalHeight: Math.max(contentHeight + PADDING * 2, MIN_CARD_HEIGHT) };
+    // Y cursor, advanced as each optional section below is stacked under it.
+    let cursor = contentY + contentHeight;
+
+    let statusY = 0;
+    let viewMapY = 0;
+    if (showStatus) {
+      statusY = cursor + GAP;
+      const statusHeight = measureTextHeight(statusText, 11, CONTENT_WIDTH);
+      cursor = statusY + statusHeight;
+
+      if (locationNames) {
+        viewMapY = cursor + 4;
+        cursor = viewMapY + 16; // fixed "View on map →" line height
+      }
     }
 
-    const statusY = contentY + contentHeight + GAP;
-    const statusHeight = measureTextHeight(statusText, 11, CONTENT_WIDTH);
-    const viewMapY = statusY + statusHeight + 4;
-    const viewMapHeight = locationNames ? 16 : 0;
+    let visitDateY = 0;
+    if (card.visitDate) {
+      visitDateY = cursor + GAP;
+      cursor = visitDateY + measureTextHeight(`Visited: ${card.visitDate}`, 11, CONTENT_WIDTH);
+    }
 
-    const totalHeight = Math.max(
-      (locationNames ? viewMapY + viewMapHeight : statusY + statusHeight) + PADDING,
-      MIN_CARD_HEIGHT
-    );
+    const totalHeight = Math.max(cursor + PADDING, MIN_CARD_HEIGHT);
 
-    return { contentY, descY, contentHeight, statusY, viewMapY, totalHeight };
-  }, [card.type, card.content, card.linkMeta?.title, linkDescription, statusText, locationNames, showStatus]);
+    return { contentY, descY, contentHeight, statusY, viewMapY, visitDateY, totalHeight };
+  }, [
+    card.type,
+    card.content,
+    card.linkMeta?.title,
+    card.visitDate,
+    linkDescription,
+    statusText,
+    locationNames,
+    showStatus,
+  ]);
 
   // Overlays a real <textarea> directly on top of the card's text so you can
   // type into it in place — Konva renders to <canvas>, which has no native
@@ -128,7 +175,7 @@ export function BoardCard({
       padding: '0',
       margin: '0',
       border: 'none',
-      outline: '2px solid #aa3bff',
+      outline: `2px solid ${ACCENT_COLOR}`,
       outlineOffset: '2px',
       resize: 'none',
       overflow: 'hidden',
@@ -217,16 +264,25 @@ export function BoardCard({
       onTap={handleClick}
     >
       <Rect
+        ref={rectRef}
         width={CARD_WIDTH}
         height={layout.totalHeight}
         fill="#ffffff"
-        stroke={isActive ? '#aa3bff' : '#e5e4e7'}
-        strokeWidth={isActive ? 3 : 1}
-        cornerRadius={10}
-        shadowColor="rgba(0,0,0,0.15)"
-        shadowBlur={6}
-        shadowOffsetY={2}
+        // Baseline/inactive values only — the effect above animates these
+        // via Konva's own tweening once isActive changes.
+        stroke="#e5e4e7"
+        hitStrokeWidth={0.5}
+        cornerRadius={2}
+        shadowColor="rgba(0,0,0,0.45)"
+        shadowBlur={10}
       />
+
+      {/* Day-color accent — a separate strip rather than the card's own
+          stroke, so it stays visible alongside the selection outline instead
+          of competing with it for the same border. */}
+      {dayColor && (
+        <Rect width={6} height={layout.totalHeight} fill={dayColor} cornerRadius={[10, 0, 0, 10]} />
+      )}
 
       {/* Other users' live selection — concentric outline + name badge per
           selector, in their own presence color, so it reads distinctly from
@@ -297,7 +353,7 @@ export function BoardCard({
       )}
 
       {showStatus && (
-        <Text x={PADDING} y={layout.statusY} width={CONTENT_WIDTH} text={statusText} fontSize={11} fill="#aa3bff" wrap="word" />
+        <Text x={PADDING} y={layout.statusY} width={CONTENT_WIDTH} text={statusText} fontSize={11} fill={ACCENT_COLOR} wrap="word" />
       )}
 
       {showStatus && locationNames && (
@@ -307,9 +363,21 @@ export function BoardCard({
           width={CONTENT_WIDTH}
           text="View on map →"
           fontSize={11}
-          fill="#aa3bff"
+          fill={ACCENT_COLOR}
           onClick={handleViewOnMapClick}
           onTap={handleViewOnMapClick}
+        />
+      )}
+
+      {card.visitDate && (
+        <Text
+          x={PADDING}
+          y={layout.visitDateY}
+          width={CONTENT_WIDTH}
+          text={`date: ${card.visitDate}`}
+          fontSize={11}
+          fill="#6b6375"
+          wrap="word"
         />
       )}
     </Group>

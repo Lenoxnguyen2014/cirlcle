@@ -15,6 +15,7 @@ export function mapRowToBoardCard(row: any): BoardCard {
     positionY: row.position_y,
     extractionStatus: row.extraction_status,
     rawExtractedLocations: row.raw_extracted_locations ?? undefined,
+    visitDate: row.visit_date ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

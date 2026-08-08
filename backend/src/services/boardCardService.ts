@@ -223,13 +223,33 @@ const boardCardService = {
 
     if (error) throw new Error(`Card Update Error: ${error.message}`);
 
-    // Content changed — old extracted locations no longer apply either way.
-    await client.from('board_locations').delete().eq('card_id', cardId);
     if (params.type === 'text') {
-      await client.from('board_cards').update({ extraction_status: 'done' }).eq('id', cardId);
+      // Text cards normally never have a location — except manually-placed
+      // pin cards from the map (still type 'text', just created with known
+      // coordinates via createPinCard). If one exists, keep its lat/lng and
+      // just rename it to match the edited text instead of deleting it.
+      const { data: existingLocation } = await client
+        .from('board_locations')
+        .select('id')
+        .eq('card_id', cardId)
+        .maybeSingle();
+
+      if (existingLocation) {
+        await client.from('board_locations').update({ name: params.content }).eq('id', existingLocation.id);
+      }
+      await client
+        .from('board_cards')
+        .update({
+          extraction_status: 'done',
+          // Keep the card's own location display in sync with the rename —
+          // this is what BoardCard reads to show "📍 <name>" on the card.
+          ...(existingLocation ? { raw_extracted_locations: [{ name: params.content }] } : {}),
+        })
+        .eq('id', cardId);
     } else {
       // Content changed — old extracted locations no longer apply, so
       // re-run extraction+geocoding on the new content.
+      await client.from('board_locations').delete().eq('card_id', cardId);
       await runExtractionAndGeocode(client, cardId, boardId, { type: params.type, text: extractionText });
     }
 
@@ -243,6 +263,48 @@ const boardCardService = {
     return mapRowToBoardCard(finalRow);
   },
 
+  // Manual pin dropped on the map: the card's content IS the label, and
+  // since the coordinates come straight from the click, this skips both the
+  // AI extraction call and the forward-geocode call entirely.
+  async createPinCard(
+    client: SupabaseClient,
+    boardId: string,
+    createdBy: string,
+    params: { name: string; lat: number; lng: number; positionX: number; positionY: number }
+  ): Promise<BoardCard> {
+    const { data, error } = await client
+      .from('board_cards')
+      .insert({
+        board_id: boardId,
+        created_by: createdBy,
+        type: 'text',
+        content: params.name,
+        position_x: params.positionX,
+        position_y: params.positionY,
+        extraction_status: 'done',
+        // BoardCard reads this to render the "📍 <name>" status line and
+        // the "View on map" link — same shape AI extraction would produce.
+        raw_extracted_locations: [{ name: params.name }],
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(`Card Insert Error: ${error.message}`);
+
+    const { error: locationError } = await client.from('board_locations').insert({
+      board_id: boardId,
+      card_id: data.id,
+      name: params.name,
+      lat: params.lat,
+      lng: params.lng,
+      geocode_status: 'done',
+    });
+
+    if (locationError) throw new Error(`Location Insert Error: ${locationError.message}`);
+
+    return mapRowToBoardCard(data);
+  },
+
   async listCards(client: SupabaseClient, boardId: string): Promise<BoardCard[]> {
     const { data, error } = await client
       .from('board_cards')
@@ -252,6 +314,20 @@ const boardCardService = {
 
     if (error) throw new Error(`Card List Error: ${error.message}`);
     return (data || []).map(mapRowToBoardCard);
+  },
+
+  async listDayColors(client: SupabaseClient, boardId: string): Promise<{ date: string; color: string }[]> {
+    const { data, error } = await client.from('board_day_colors').select('*').eq('board_id', boardId);
+    if (error) throw new Error(`Day Color List Error: ${error.message}`);
+    return (data || []).map((row) => ({ date: row.visit_date, color: row.color }));
+  },
+
+  async setDayColor(client: SupabaseClient, boardId: string, visitDate: string, color: string) {
+    const { error } = await client
+      .from('board_day_colors')
+      .upsert({ board_id: boardId, visit_date: visitDate, color }, { onConflict: 'board_id,visit_date' });
+
+    if (error) throw new Error(`Day Color Update Error: ${error.message}`);
   },
 
   async listLocations(client: SupabaseClient, boardId: string): Promise<BoardLocation[]> {
@@ -275,7 +351,24 @@ const boardCardService = {
     if (error) throw new Error(`Card Update Error: ${error.message}`);
   },
 
+  async updateCardDate(client: SupabaseClient, boardId: string, cardId: string, visitDate: string | null) {
+    const { error } = await client
+      .from('board_cards')
+      .update({ visit_date: visitDate, updated_at: new Date().toISOString() })
+      .eq('id', cardId)
+      .eq('board_id', boardId);
+
+    if (error) throw new Error(`Card Update Error: ${error.message}`);
+  },
+
   async deleteCard(client: SupabaseClient, boardId: string, cardId: string) {
+    // Delete the location explicitly rather than relying on the FK's
+    // ON DELETE CASCADE — Realtime doesn't reliably publish a board_locations
+    // delete that only happens as a cascade side-effect of the board_cards
+    // delete, even though the row is genuinely removed from the database.
+    const { error: locationError } = await client.from('board_locations').delete().eq('card_id', cardId);
+    if (locationError) console.error('Error deleting board_locations for card', cardId, locationError.message);
+
     const { error } = await client.from('board_cards').delete().eq('id', cardId).eq('board_id', boardId);
     if (error) throw new Error(`Card Delete Error: ${error.message}`);
   },

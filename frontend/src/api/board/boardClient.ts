@@ -75,6 +75,12 @@ export const updateCardPosition = (boardId: string, cardId: string, x: number, y
     body: JSON.stringify({ x, y }),
   });
 
+export const updateCardDate = (boardId: string, cardId: string, visitDate: string | null) =>
+  request<void>(`/boards/${boardId}/cards/${cardId}/date`, {
+    method: 'PATCH',
+    body: JSON.stringify({ visitDate }),
+  });
+
 export const deleteCard = (boardId: string, cardId: string) =>
   request<void>(`/boards/${boardId}/cards/${cardId}`, { method: 'DELETE' });
 
@@ -92,3 +98,17 @@ export const restoreCard = (
 ) => request<BoardCard>(`/boards/${boardId}/cards/restore`, { method: 'POST', body: JSON.stringify(snapshot) });
 
 export const listBoardLocations = (boardId: string) => request<BoardLocation[]>(`/boards/${boardId}/locations`);
+
+// Manual pin dropped on the map — creates both a board_cards row (so it
+// shows up on the canvas too) and a board_locations row with the given
+// coordinates already known, no geocoding round-trip needed.
+export const createPin = (boardId: string, payload: { name?: string; lat: number; lng: number }) =>
+  request<BoardCard>(`/boards/${boardId}/pins`, { method: 'POST', body: JSON.stringify(payload) });
+
+export const listDayColors = (boardId: string) => request<{ date: string; color: string }[]>(`/boards/${boardId}/day-colors`);
+
+export const setDayColor = (boardId: string, date: string, color: string) =>
+  request<void>(`/boards/${boardId}/day-colors/${date}`, {
+    method: 'PUT',
+    body: JSON.stringify({ color }),
+  });

@@ -22,6 +22,7 @@ interface BoardCard {
   positionY: number;
   extractionStatus: 'pending' | 'processing' | 'done' | 'failed';
   rawExtractedLocations?: { name: string; confidence?: number }[];
+  visitDate?: string;
   createdAt: string;
   updatedAt: string;
 }

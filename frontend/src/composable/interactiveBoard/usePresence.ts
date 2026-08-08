@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type Konva from 'konva';
 import { supabaseClient } from '../../lib/supabaseClient';
 import { colorForUser } from '../../utils/presenceColor';
 import type { AuthUser } from '../../types/auth';
@@ -17,12 +16,11 @@ interface PresenceUser {
 
 // Owns the board's presence channel: live cursors, live selection/editing
 // highlights, and "who's online" — all ephemeral pub/sub state that never
-// touches Postgres, scoped to `presence-<boardId>`.
-export function usePresence(
-  boardId: string | undefined,
-  user: AuthUser | null,
-  stageRef: React.RefObject<Konva.Stage | null>
-) {
+// touches Postgres, scoped to `presence-<boardId>`. Coordinate-space-agnostic
+// on purpose — sendCursor just broadcasts whatever x/y it's given, so both
+// the Konva canvas (world pixel space) and the Google Map (lat/lng space)
+// can reuse this without either one leaking into the other.
+export function usePresence(boardId: string | undefined, user: AuthUser | null) {
   const [remoteCursors, setRemoteCursors] = useState<Record<string, RemoteCursorState>>({});
   const [remoteSelections, setRemoteSelections] = useState<Record<string, RemoteSelectionState>>({});
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
@@ -106,34 +104,27 @@ export function usePresence(
     [user]
   );
 
-  // Throttled broadcast of this user's pointer, converted to world
-  // coordinates (same space as card positions) so every viewer's own
-  // pan/zoom projects it correctly with no extra math on the receiving end.
-  const sendCursor = useCallback(() => {
-    const stage = stageRef.current;
-    const channel = presenceChannelRef.current;
-    if (!stage || !channel || !user) return;
+  // Throttled broadcast of this user's pointer. Takes coordinates directly
+  // rather than reading them from a specific rendering surface — the caller
+  // decides what x/y mean (Konva world-pixel space, Google Maps lat/lng,
+  // etc.) and every viewer's own page interprets it the same way back.
+  const sendCursor = useCallback(
+    (x: number, y: number) => {
+      const channel = presenceChannelRef.current;
+      if (!channel || !user) return;
 
-    const now = Date.now();
-    if (now - lastCursorSentRef.current < CURSOR_BROADCAST_INTERVAL_MS) return;
-    lastCursorSentRef.current = now;
+      const now = Date.now();
+      if (now - lastCursorSentRef.current < CURSOR_BROADCAST_INTERVAL_MS) return;
+      lastCursorSentRef.current = now;
 
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-    const scale = stage.scaleX();
-
-    channel.send({
-      type: 'broadcast',
-      event: 'cursor',
-      payload: {
-        userId: user.id,
-        x: (pointer.x - stage.x()) / scale,
-        y: (pointer.y - stage.y()) / scale,
-        email: user.email,
-        color: colorForUser(user.id),
-      },
-    });
-  }, [stageRef, user]);
+      channel.send({
+        type: 'broadcast',
+        event: 'cursor',
+        payload: { userId: user.id, x, y, email: user.email, color: colorForUser(user.id) },
+      });
+    },
+    [user]
+  );
 
   // Group remote selections by card so a card can render an outline per
   // remote user who currently has it selected (rare to have more than one,

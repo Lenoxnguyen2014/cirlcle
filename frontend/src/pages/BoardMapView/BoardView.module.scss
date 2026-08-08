@@ -1,0 +1,18 @@
+.stageContainer {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--code-bg);
+}
+
+.toolbarOverlay {
+  position: absolute;
+  bottom: var(--space-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}

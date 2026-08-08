@@ -1,0 +1,178 @@
+.remoteCursor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.remoteCursorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  flex-shrink: 0;
+}
+
+.remoteCursorLabel {
+  color: #fff;
+  font-size: var(--font-2xs);
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.splitContainer {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: var(--space-lg);
+}
+
+.mapPane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 60%;
+  min-width: 0;
+}
+
+.itineraryPane {
+  flex: 0 0 320px;
+  min-width: 260px;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  padding-left: var(--space-lg);
+}
+
+.mapContainer {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--radius-lg);
+}
+
+.itineraryList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.itineraryGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  border-left: 4px solid transparent;
+  padding-left: var(--space-sm);
+}
+
+.itineraryGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.itineraryGroupTitle {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0;
+}
+
+.colorSwatch {
+  height: var(--button-size-xs) !important;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  .cp_button {
+    height: 60%;
+  }
+}
+
+// The picker library adds its own small dropdown-arrow badge next to the
+// swatch it binds to (.cp_caret) — hidden here since our swatch button
+// already communicates "clickable" on its own.
+:global(.cp_caret) {
+  display: none !important;
+}
+
+.itineraryGroupOver {
+  background: var(--accent-bg);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.itineraryGroupEmpty {
+  color: var(--text);
+  font-size: var(--font-2xs);
+  font-style: italic;
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.itineraryRow {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm, 6px);
+  font-size: var(--font-xs);
+  color: var(--text-h);
+  background: var(--bg);
+  cursor: grab;
+  border: 1px solid rgb(215, 214, 214);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  touch-action: none;
+  user-select: none;
+}
+
+.itineraryRow:active {
+  cursor: grabbing;
+}
+
+.itineraryRowSelected {
+  background: var(--accent-bg);
+}
+
+.itineraryEmpty {
+  color: var(--text);
+  font-size: var(--font-xs);
+}
+
+.addDateButton {
+  align-self: flex-start;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm, 6px);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-xs);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.addDateInput {
+  align-self: flex-start;
+  font-size: 12px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.pinForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 200px;
+}
+
+.pinFormInput {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 13px;
+}
+
+.pinFormActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+}

@@ -38,8 +38,13 @@ router.post("/boards/:boardId/cards/restore", requireAuth, boardController.resto
 router.post("/boards/:boardId/cards/photo", requireAuth, upload.single("photo"), boardController.createCard);
 router.patch("/boards/:boardId/cards/:cardId", requireAuth, boardController.updateContent);
 router.patch("/boards/:boardId/cards/:cardId/position", requireAuth, boardController.updatePosition);
+router.patch("/boards/:boardId/cards/:cardId/date", requireAuth, boardController.updateCardDate);
 router.delete("/boards/:boardId/cards/:cardId", requireAuth, boardController.deleteCard);
 
 router.get("/boards/:boardId/locations", requireAuth, boardController.listLocations);
+
+router.get("/boards/:boardId/day-colors", requireAuth, boardController.listDayColors);
+router.put("/boards/:boardId/day-colors/:date", requireAuth, boardController.setDayColor);
+router.post("/boards/:boardId/pins", requireAuth, boardController.createPin);
 
 export default router;

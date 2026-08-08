@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { boardService } from '../services/boardService.js';
 import { boardCardService } from '../services/boardCardService.js';
+import { reverseGeocode } from '../services/geocodingService.js';
 import { createUserScopedClient } from '../lib/supabaseUser.js';
 
 const boardController = {
@@ -119,6 +120,18 @@ const boardController = {
     }
   },
 
+  async updateCardDate(req: Request, res: Response) {
+    try {
+      const client = createUserScopedClient(req.accessToken!);
+      const { boardId, cardId } = req.params;
+      const { visitDate } = req.body;
+      await boardCardService.updateCardDate(client, boardId, cardId, visitDate ?? null);
+      return res.status(200).json({ success: true });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+  },
+
   async deleteCard(req: Request, res: Response) {
     try {
       const client = createUserScopedClient(req.accessToken!);
@@ -141,11 +154,52 @@ const boardController = {
     }
   },
 
+  async createPin(req: Request, res: Response) {
+    try {
+      const client = createUserScopedClient(req.accessToken!);
+      const { boardId } = req.params;
+      const { lat, lng } = req.body;
+      const name = req.body.name?.trim() || (await reverseGeocode(lat, lng)) || 'Dropped pin';
+      const card = await boardCardService.createPinCard(client, boardId, req.user!.id, {
+        name,
+        lat,
+        lng,
+        positionX: 40,
+        positionY: 40,
+      });
+      return res.status(201).json({ success: true, data: card });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+  },
+
   async listLocations(req: Request, res: Response) {
     try {
       const client = createUserScopedClient(req.accessToken!);
       const locations = await boardCardService.listLocations(client, req.params.boardId);
       return res.status(200).json({ success: true, data: locations });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+  },
+
+  async listDayColors(req: Request, res: Response) {
+    try {
+      const client = createUserScopedClient(req.accessToken!);
+      const dayColors = await boardCardService.listDayColors(client, req.params.boardId);
+      return res.status(200).json({ success: true, data: dayColors });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+  },
+
+  async setDayColor(req: Request, res: Response) {
+    try {
+      const client = createUserScopedClient(req.accessToken!);
+      const { boardId, date } = req.params;
+      const { color } = req.body;
+      await boardCardService.setDayColor(client, boardId, date, color);
+      return res.status(200).json({ success: true });
     } catch (error: any) {
       return res.status(400).json({ success: false, error: error.message });
     }

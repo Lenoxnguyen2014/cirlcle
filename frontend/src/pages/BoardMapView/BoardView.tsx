@@ -1,25 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Stage, Layer } from 'react-konva';
 import Konva from 'konva';
-import { useAuth } from '../../context/AuthContext';
-import { useBoardCards } from '../../composable/interactiveBoard/useBoardCards';
-import { usePresence } from '../../composable/interactiveBoard/usePresence';
 import { useCanvasZoom } from '../../composable/interactiveBoard/useCanvasZoom';
 import { BoardCard as BoardCardComponent } from '../../components/board/BoardCard';
 import { RemoteCursor } from '../../components/board/RemoteCursor';
 import { AddCardToolbar } from '../../components/board/AddCardToolbar';
-import { ShareBoardButton } from '../../components/shareButton/ShareBoardButton';
-import styles from './InteractiveBoardPage.module.scss';
+import { useBoardMapViewContext } from './context';
+import styles from './BoardView.module.scss';
 
-export function InteractiveBoardPage() {
-  const { boardId } = useParams<{ boardId: string }>();
+export function BoardView() {
+  const {
+    boardId,
+    cards,
+    cardsError,
+    moveCard,
+    addCard,
+    editCard,
+    deleteCard,
+    undoDelete,
+    remoteCursors,
+    remoteSelectionsByCard,
+    broadcastSelection,
+    sendCursor,
+    dayColors,
+  } = useBoardMapViewContext();
+
   const [searchParams] = useSearchParams();
   const highlightCardId = searchParams.get('cardId');
   const navigate = useNavigate();
-  const { user } = useAuth();
-
-  const { cards, error, moveCard, addCard, editCard, deleteCard, undoDelete } = useBoardCards(boardId);
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -27,11 +36,6 @@ export function InteractiveBoardPage() {
   const [stageWidth, setStageWidth] = useState(800);
   const [stageHeight, setStageHeight] = useState(560);
 
-  const { remoteCursors, onlineUsers, remoteSelectionsByCard, broadcastSelection, sendCursor } = usePresence(
-    boardId,
-    user,
-    stageRef
-  );
   const { handleWheel } = useCanvasZoom(stageRef);
 
   useEffect(() => {
@@ -72,7 +76,10 @@ export function InteractiveBoardPage() {
     [deleteCard, broadcastSelection]
   );
 
-
+  // Ctrl/Cmd+Z undoes the last card this client deleted; Delete/Backspace
+  // removes whichever card is currently selected. Both skipped while focus
+  // is in a text field so they don't hijack native text editing there (e.g.
+  // inside the add-card input).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -94,6 +101,9 @@ export function InteractiveBoardPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoDelete, handleDeleteCard, selectedCardId]);
 
+  // New cards land near the current viewport's center, converted from screen
+  // space to world space — otherwise they'd appear off-screen once the board
+  // has been panned/zoomed away from the origin.
   const nextPosition = useCallback(() => {
     const stage = stageRef.current;
     if (!stage) return { x: 40, y: 40 };
@@ -105,6 +115,19 @@ export function InteractiveBoardPage() {
 
     return { x: centerX - 100 + jitter, y: centerY - 40 + jitter };
   }, [cards.length, stageWidth, stageHeight]);
+
+  // Converts the pointer to world coordinates (same space as card positions)
+  // before handing it to sendCursor, which is coordinate-space-agnostic —
+  // every viewer's own pan/zoom then projects it correctly with no extra
+  // math needed on the receiving end.
+  const handleMouseMove = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+    const scale = stage.scaleX();
+    sendCursor((pointer.x - stage.x()) / scale, (pointer.y - stage.y()) / scale);
+  }, [sendCursor]);
 
   const highlightCard = highlightCardId ? cards.find((c) => c.id === highlightCardId) : undefined;
 
@@ -122,29 +145,9 @@ export function InteractiveBoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightCardId, highlightCard?.positionX, highlightCard?.positionY, stageWidth, stageHeight]);
 
-  if (!boardId) return null;
-
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        {onlineUsers.length > 0 && (
-          <div className={styles.presenceRow}>
-            {onlineUsers.map((u) => (
-              <div key={u.userId} className={styles.presenceAvatar} style={{ background: u.color }} title={u.email}>
-                {(u.email[0] || '?').toUpperCase()}
-              </div>
-            ))}
-          </div>
-        )}
-        <div className={styles.headerActions}>
-          <ShareBoardButton boardId={boardId} />
-          <button type="button" className={styles.mapButton} onClick={() => navigate(`/boards/${boardId}/map`)}>
-            View map
-          </button>
-        </div>
-      </div>
-
-      {error && <p className="auth-error">{error}</p>}
+    <>
+      {cardsError && <p className="auth-error">{cardsError}</p>}
 
       <div ref={containerRef} className={styles.stageContainer}>
         <Stage
@@ -153,7 +156,7 @@ export function InteractiveBoardPage() {
           height={stageHeight}
           draggable
           onWheel={handleWheel}
-          onMouseMove={sendCursor}
+          onMouseMove={handleMouseMove}
           onClick={(e) => {
             if (e.target === e.target.getStage()) {
               setSelectedCardId(null);
@@ -168,6 +171,7 @@ export function InteractiveBoardPage() {
                 card={card}
                 highlighted={card.id === highlightCardId}
                 selected={card.id === selectedCardId}
+                dayColor={card.visitDate ? dayColors[card.visitDate] : undefined}
                 onDragEnd={moveCard}
                 onViewOnMap={(cardId) => navigate(`/boards/${boardId}/map?cardId=${cardId}`)}
                 onSelect={handleSelectCard}
@@ -186,6 +190,6 @@ export function InteractiveBoardPage() {
           <AddCardToolbar boardId={boardId} nextPosition={nextPosition} onCardCreated={addCard} />
         </div>
       </div>
-    </div>
+    </>
   );
 }

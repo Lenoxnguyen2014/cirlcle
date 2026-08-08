@@ -23,14 +23,14 @@ export function useBoardCards(boardId: string | undefined) {
         .then(setCards)
         .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load board'));
 
+    fetchCards();
+
     // Initial load, then re-fetched every time this subscription (re)connects.
     // postgres_changes has no catch-up delivery for events missed while the
     // socket was disconnected (network blip, backgrounded tab, etc.) — a
     // dropped-then-reconnected client would otherwise silently stay stale
     // forever, since Supabase auto-reconnects and re-fires 'SUBSCRIBED' but
     // never replays what happened during the gap.
-    fetchCards();
-
     const channel = supabaseClient
       .channel(`board-cards-${boardId}`)
       .on(
@@ -69,6 +69,14 @@ export function useBoardCards(boardId: string | undefined) {
     setCards((prev) => (prev.some((c) => c.id === card.id) ? prev : [...prev, card]));
   }, []);
 
+  const setCardDate = useCallback(
+    (cardId: string, visitDate: string | null) => {
+      setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, visitDate: visitDate ?? undefined } : c)));
+      if (boardId) boardApi.updateCardDate(boardId, cardId, visitDate).catch(() => {});
+    },
+    [boardId]
+  );
+
   const editCard = useCallback(
     (cardId: string, type: 'text' | 'link', content: string) => {
       if (!boardId) return;
@@ -87,7 +95,11 @@ export function useBoardCards(boardId: string | undefined) {
         if (deleted) lastDeletedRef.current = deleted;
         return prev.filter((c) => c.id !== cardId);
       });
-      if (boardId) boardApi.deleteCard(boardId, cardId).catch(() => {});
+      // Returned so callers can chain a follow-up (e.g. MapPage re-fetching
+      // locations) after the delete actually lands on the backend, rather
+      // than depending solely on Realtime to notify them of the cascade.
+      if (!boardId) return Promise.resolve();
+      return boardApi.deleteCard(boardId, cardId).catch(() => {});
     },
     [boardId]
   );
@@ -113,5 +125,5 @@ export function useBoardCards(boardId: string | undefined) {
       });
   }, [boardId]);
 
-  return { cards, error, moveCard, addCard, editCard, deleteCard, undoDelete };
+  return { cards, error, moveCard, addCard, editCard, setCardDate, deleteCard, undoDelete };
 }

@@ -5,8 +5,9 @@ import { LayoutAfterSignin } from './layout/LayoutAfterSignin';
 import { LoginPage } from './pages/Auth/LoginPage';
 import { SignupPage } from './pages/Auth/SignupPage';
 import { BoardsHomePage } from './pages/BoardsHome/BoardsHomePage';
-import { InteractiveBoardPage } from './pages/InteractiveBoard/InteractiveBoardPage';
-import { MapPage } from './pages/Map/MapPage';
+import { BoardMapViewPage } from './pages/BoardMapView/BoardMapViewPage';
+import { BoardView } from './pages/BoardMapView/BoardView';
+import { MapView } from './pages/BoardMapView/MapView';
 
 function App() {
   return (
@@ -25,26 +26,23 @@ function App() {
               </RequireAuth>
             }
           />
+          {/* BoardMapViewPage is the shared parent for both views — it owns
+              cards/presence/locations/day-colors once, so toggling between
+              board and map (its two nested routes below) only swaps which
+              child <Outlet> renders instead of remounting all of that. */}
           <Route
             path="/boards/:boardId"
             element={
               <RequireAuth>
                 <LayoutAfterSignin>
-                  <InteractiveBoardPage />
+                  <BoardMapViewPage />
                 </LayoutAfterSignin>
               </RequireAuth>
             }
-          />
-          <Route
-            path="/boards/:boardId/map"
-            element={
-              <RequireAuth>
-                <LayoutAfterSignin>
-                  <MapPage />
-                </LayoutAfterSignin>
-              </RequireAuth>
-            }
-          />
+          >
+            <Route index element={<BoardView />} />
+            <Route path="map" element={<MapView />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
